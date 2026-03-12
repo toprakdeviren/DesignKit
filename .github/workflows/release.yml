@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: macos-14
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Get tag
+      id: tag
+      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+    
+    - name: Extract release notes
+      id: release_notes
+      run: |
+        # Extract release notes from CHANGELOG.md for this version
+        VERSION="${{ steps.tag.outputs.tag }}"
+        VERSION_NO_V="${VERSION#v}"
+        
+        # Find the section for this version in CHANGELOG
+        awk "/## \[${VERSION_NO_V}\]/,/## \[/{print; if(/## \[/ && !/## \[${VERSION_NO_V}\]/) exit}" CHANGELOG.md | head -n -1 > release_notes.md
+        
+        # If empty, use default
+        if [ ! -s release_notes.md ]; then
+          echo "Release $VERSION" > release_notes.md
+          echo "" >> release_notes.md
+          echo "See [CHANGELOG.md](CHANGELOG.md) for details." >> release_notes.md
+        fi
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: release_notes.md
+        draft: false
+        prerelease: ${{ contains(steps.tag.outputs.tag, '-alpha') || contains(steps.tag.outputs.tag, '-beta') || contains(steps.tag.outputs.tag, '-rc') }}
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  build-documentation:
+    name: Build and Deploy Documentation
+    runs-on: macos-14
+    needs: create-release
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v1
+      with:
+        swift-version: "5.9"
+    
+    - name: Build Documentation
+      run: |
+        swift package --allow-writing-to-directory ./docs \
+          generate-documentation \
+          --target DesignKit \
+          --output-path ./docs \
+          --transform-for-static-hosting \
+          --hosting-base-path DesignKit
+    
+    - name: Upload Documentation Artifact
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: ./docs
+    
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
+  
+  notify:
+    name: Notify Release
+    runs-on: ubuntu-latest
+    needs: [create-release, build-documentation]
+    
+    steps:
+    - name: Get tag
+      id: tag
+      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+    
+    - name: Release Notification
+      run: |
+        echo "🎉 DesignKit ${{ steps.tag.outputs.tag }} has been released!"
+        echo "📦 Package: https://github.com/${{ github.repository }}"
+        echo "📚 Documentation: https://${{ github.repository_owner }}.github.io/DesignKit/"
+        echo "📝 Release Notes: https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.tag }}"
+

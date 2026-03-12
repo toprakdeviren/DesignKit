@@ -1,0 +1,15 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 GitHub Discussions
+    url: https://github.com/toprakdeviren/DesignKit/discussions
+    about: Toplulukla soru sorun, fikir paylaşın ve showcase paylaşın
+  - name: 📚 Dokümantasyon
+    url: https://toprakdeviren.github.io/DesignKit/
+    about: Tam API referansı ve rehberler
+  - name: 🚀 Getting Started
+    url: https://github.com/toprakdeviren/DesignKit/blob/master/Docs/01-Getting-Started.md
+    about: Hızlı başlangıç rehberi
+  - name: 🆘 Destek
+    url: https://github.com/toprakdeviren/DesignKit/blob/master/SUPPORT.md
+    about: Destek alma yolları
+

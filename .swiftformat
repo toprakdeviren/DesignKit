@@ -1,0 +1,33 @@
+# SwiftFormat Configuration for DesignKit
+
+# Version
+--swiftversion 5.8
+
+# Excluded paths
+--exclude .build,.swiftpm,Package.swift
+
+# Format options
+--indent 4
+--indentcase false
+--trimwhitespace always
+--nospaceoperators ..<,...
+--ranges spaced
+--self remove
+--stripunusedargs closure-only
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--wrapconditions before-first
+--maxwidth 120
+--ifdef indent
+
+# Enabled rules
+--enable isEmpty
+--enable sortedImports
+--enable redundantReturn
+--enable redundantSelf
+--enable trailingCommas
+
+# Disabled rules
+--disable andOperator
+--disable redundantInit

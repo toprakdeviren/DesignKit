@@ -1,0 +1,158 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+      skip_changelog:
+        description: 'Skip changelog update'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    name: Bump Version
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup Git
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+    
+    - name: Get Current Version
+      id: current_version
+      run: |
+        # CHANGELOG'dan mevcut versiyonu al
+        CURRENT=$(grep -m 1 "## \[" CHANGELOG.md | sed 's/## \[\(.*\)\].*/\1/' || echo "0.0.0")
+        echo "current=$CURRENT" >> $GITHUB_OUTPUT
+        echo "Current version: $CURRENT"
+    
+    - name: Calculate New Version
+      id: new_version
+      run: |
+        CURRENT="${{ steps.current_version.outputs.current }}"
+        VERSION_TYPE="${{ inputs.version_type }}"
+        
+        IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT"
+        MAJOR="${VERSION_PARTS[0]}"
+        MINOR="${VERSION_PARTS[1]}"
+        PATCH="${VERSION_PARTS[2]}"
+        
+        case "$VERSION_TYPE" in
+          major)
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+            ;;
+          minor)
+            MINOR=$((MINOR + 1))
+            PATCH=0
+            ;;
+          patch)
+            PATCH=$((PATCH + 1))
+            ;;
+        esac
+        
+        NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+        echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "New version: $NEW_VERSION"
+    
+    - name: Update CHANGELOG
+      if: ${{ !inputs.skip_changelog }}
+      run: |
+        NEW_VERSION="${{ steps.new_version.outputs.version }}"
+        TODAY=$(date +%Y-%m-%d)
+        
+        # [Unreleased] → [NEW_VERSION] - DATE
+        sed -i "s/## \[Unreleased\]/## [$NEW_VERSION] - $TODAY/" CHANGELOG.md
+        
+        # Yeni [Unreleased] section ekle
+        sed -i "/## \[$NEW_VERSION\] - $TODAY/i ## [Unreleased]\n" CHANGELOG.md
+        
+        echo "✅ CHANGELOG updated to version $NEW_VERSION"
+    
+    - name: Update Package.swift
+      run: |
+        # Package.swift'te version comment'ini güncelle (varsa)
+        NEW_VERSION="${{ steps.new_version.outputs.version }}"
+        
+        if grep -q "// Version:" Package.swift; then
+          sed -i "s/\/\/ Version: .*/\/\/ Version: $NEW_VERSION/" Package.swift
+        else
+          sed -i "1i // Version: $NEW_VERSION" Package.swift
+        fi
+        
+        echo "✅ Package.swift updated"
+    
+    - name: Update PROJECT_STATS.md
+      run: |
+        NEW_VERSION="${{ steps.new_version.outputs.version }}"
+        
+        if grep -q "Versiyon:" PROJECT_STATS.md; then
+          sed -i "s/Versiyon: .*/Versiyon: $NEW_VERSION/" PROJECT_STATS.md
+        fi
+        
+        echo "✅ PROJECT_STATS.md updated"
+    
+    - name: Commit Changes
+      run: |
+        NEW_VERSION="${{ steps.new_version.outputs.version }}"
+        
+        git add CHANGELOG.md Package.swift PROJECT_STATS.md
+        git commit -m "chore: bump version to $NEW_VERSION"
+        git push
+        
+        echo "✅ Changes committed and pushed"
+    
+    - name: Create Git Tag
+      run: |
+        NEW_VERSION="${{ steps.new_version.outputs.version }}"
+        
+        git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+        git push origin "v$NEW_VERSION"
+        
+        echo "✅ Tag v$NEW_VERSION created and pushed"
+    
+    - name: Create Release Draft
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const newVersion = '${{ steps.new_version.outputs.version }}';
+          
+          // CHANGELOG'dan release notes'u extract et
+          const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+          const versionMatch = changelog.match(new RegExp(`## \\[${newVersion}\\][\\s\\S]*?(?=## \\[|$)`));
+          const releaseNotes = versionMatch ? versionMatch[0] : `Release v${newVersion}`;
+          
+          // Draft release oluştur
+          await github.rest.repos.createRelease({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            tag_name: `v${newVersion}`,
+            name: `v${newVersion}`,
+            body: releaseNotes,
+            draft: true,
+            prerelease: newVersion.includes('-alpha') || newVersion.includes('-beta') || newVersion.includes('-rc')
+          });
+          
+          console.log(`✅ Draft release created for v${newVersion}`);
+

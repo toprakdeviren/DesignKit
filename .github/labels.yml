@@ -1,0 +1,149 @@
+# GitHub Labels Configuration
+# Bu dosya projenin label'larını tanımlar
+# Otomatik label sync için: https://github.com/marketplace/actions/github-labeler
+
+# Tür etiketleri
+- name: bug
+  description: Bir şeyler beklendiği gibi çalışmıyor
+  color: d73a4a
+
+- name: enhancement
+  description: Yeni özellik veya istek
+  color: a2eeef
+
+- name: documentation
+  description: Dokümantasyon iyileştirmeleri veya eklemeleri
+  color: 0075ca
+
+- name: question
+  description: Daha fazla bilgi gerekli
+  color: d876e3
+
+- name: good first issue
+  description: Yeni katkıcılar için iyi
+  color: 7057ff
+
+- name: help wanted
+  description: Topluluktan ekstra dikkat gerekli
+  color: 008672
+
+# Öncelik etiketleri
+- name: priority:critical
+  description: Kritik - Hemen düzeltilmeli
+  color: b60205
+
+- name: priority:high
+  description: Yüksek öncelik
+  color: d93f0b
+
+- name: priority:medium
+  description: Orta öncelik
+  color: fbca04
+
+- name: priority:low
+  description: Düşük öncelik
+  color: 0e8a16
+
+# Bileşen etiketleri
+- name: component:button
+  description: Button bileşenleriyle ilgili
+  color: c2e0c6
+
+- name: component:form
+  description: Form bileşenleriyle ilgili
+  color: c2e0c6
+
+- name: component:navigation
+  description: Navigasyon bileşenleriyle ilgili
+  color: c2e0c6
+
+- name: component:overlay
+  description: Modal, Alert, Dropdown vb.
+  color: c2e0c6
+
+- name: component:layout
+  description: Container, Grid, Breakpoint
+  color: c2e0c6
+
+- name: theme
+  description: Tema sistemi ve tokenlarla ilgili
+  color: bfd4f2
+
+# Platform etiketleri
+- name: platform:ios
+  description: iOS'e özgü
+  color: 1d76db
+
+- name: platform:macos
+  description: macOS'e özgü
+  color: 1d76db
+
+- name: platform:tvos
+  description: tvOS'e özgü
+  color: 1d76db
+
+- name: platform:watchos
+  description: watchOS'e özgü
+  color: 1d76db
+
+# Durum etiketleri
+- name: status:blocked
+  description: Başka bir issue/PR'a bağlı
+  color: 000000
+
+- name: status:in-progress
+  description: Aktif olarak üzerinde çalışılıyor
+  color: 0052cc
+
+- name: status:needs-review
+  description: İnceleme gerekli
+  color: fbca04
+
+- name: status:wontfix
+  description: Düzeltilmeyecek
+  color: ffffff
+
+- name: duplicate
+  description: Bu issue veya PR zaten mevcut
+  color: cfd3d7
+
+- name: invalid
+  description: Bu geçerli görünmüyor
+  color: e4e669
+
+# API değişiklikleri
+- name: breaking-change
+  description: API'yi bozan değişiklik
+  color: b60205
+
+- name: api:stable
+  description: Kararlı API
+  color: 0e8a16
+
+# Test & CI
+- name: tests
+  description: Test ekleme veya düzeltme
+  color: 1d76db
+
+- name: ci/cd
+  description: CI/CD pipeline değişiklikleri
+  color: 5319e7
+
+- name: performance
+  description: Performans iyileştirmesi
+  color: f9d0c4
+
+# Accessibility
+- name: accessibility
+  description: Erişilebilirlik iyileştirmesi
+  color: fef2c0
+
+- name: localization
+  description: Çeviri ve yerelleştirme
+  color: bfdadc
+
+# Dependencies
+- name: dependencies
+  description: Bağımlılık güncellemeleri
+  color: 0366d6
+
