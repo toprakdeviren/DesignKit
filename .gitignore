@@ -99,3 +99,5 @@ iOSInjectionProject/
 *.swo
 *~
 
+# Local notes
+TODO.md
