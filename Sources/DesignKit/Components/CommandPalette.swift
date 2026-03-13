@@ -175,10 +175,12 @@ public struct DKCommandPalette: View {
         .onChange(of: searchQuery) { _ in
             selectFirstCommand()
         }
-        // macOS / iPadOS hardware keyboard navigation
+        // macOS hardware keyboard navigation
+        #if os(macOS)
         .onCommand(CommandPaletteActions.moveUp) { moveSelection(up: true) }
         .onCommand(CommandPaletteActions.moveDown) { moveSelection(up: false) }
         .onCommand(CommandPaletteActions.escape) { close() }
+        #endif
     }
     
     // MARK: - Subviews
@@ -295,19 +297,13 @@ public struct DKCommandPalette: View {
     }
 }
 
-// MARK: - Hardware Keyboard Selectors
-
+#if os(macOS)
 private struct CommandPaletteActions {
-    #if os(macOS)
     static let moveUp   = #selector(NSResponder.moveUp(_:))
     static let moveDown = #selector(NSResponder.moveDown(_:))
     static let escape   = #selector(NSResponder.cancelOperation(_:))
-    #else
-    static let moveUp   = Selector("moveUp:")
-    static let moveDown = Selector("moveDown:")
-    static let escape   = Selector("cancelOperation:")
-    #endif
 }
+#endif
 
 // MARK: - Preview
 
