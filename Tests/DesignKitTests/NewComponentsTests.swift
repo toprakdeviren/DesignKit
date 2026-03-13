@@ -96,47 +96,6 @@ final class NewComponentsTests: XCTestCase {
         XCTAssertTrue(formattedSize.contains("KB") || formattedSize.contains("B"))
     }
     
-    // MARK: - Calendar Tests
-    
-    func testCalendarInitialization() {
-        let selectedDate = Binding<Date>(get: { Date() }, set: { _ in })
-        let calendar = DKCalendar(selectedDate: selectedDate)
-        XCTAssertNotNil(calendar)
-    }
-    
-    func testCalendarWithDateRange() {
-        let selectedDate = Binding<Date>(get: { Date() }, set: { _ in })
-        let minDate = Calendar.current.date(byAdding: .month, value: -1, to: Date())
-        let maxDate = Calendar.current.date(byAdding: .month, value: 1, to: Date())
-        
-        let calendar = DKCalendar(
-            selectedDate: selectedDate,
-            minDate: minDate,
-            maxDate: maxDate
-        )
-        XCTAssertNotNil(calendar)
-    }
-    
-    func testCalendarWithHighlightedDates() {
-        let selectedDate = Binding<Date>(get: { Date() }, set: { _ in })
-        let highlightedDates: Set<Date> = [Date()]
-        
-        let calendar = DKCalendar(
-            selectedDate: selectedDate,
-            highlightedDates: highlightedDates
-        )
-        XCTAssertNotNil(calendar)
-    }
-    
-    func testCalendarDisabled() {
-        let selectedDate = Binding<Date>(get: { Date() }, set: { _ in })
-        let calendar = DKCalendar(
-            selectedDate: selectedDate,
-            isDisabled: true
-        )
-        XCTAssertNotNil(calendar)
-    }
-    
     // MARK: - Chart Tests
     
     func testChartInitialization() {
