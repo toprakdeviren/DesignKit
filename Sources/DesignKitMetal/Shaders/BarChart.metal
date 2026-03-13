@@ -115,15 +115,15 @@ vertex LineVertexOutput lineVertexShader(
 ) {
     LineVertexOutput out;
     
-    LineVertexInput vertex = vertices[vertexID];
+    LineVertexInput vert = vertices[vertexID];
     
     // Convert to NDC
-    float2 ndc = (vertex.position / uniforms.viewportSize) * 2.0 - 1.0;
+    float2 ndc = (vert.position / uniforms.viewportSize) * 2.0 - 1.0;
     ndc.y = -ndc.y;
     
     out.position = float4(ndc, 0.0, 1.0);
-    out.color = vertex.color;
-    out.thickness = vertex.thickness;
+    out.color = vert.color;
+    out.thickness = vert.thickness;
     
     return out;
 }
@@ -196,13 +196,13 @@ vertex GradientVertexOutput gradientVertexShader(
 ) {
     GradientVertexOutput out;
     
-    GradientVertexInput vertex = vertices[vertexID];
+    GradientVertexInput vert = vertices[vertexID];
     
-    float2 ndc = (vertex.position / uniforms.viewportSize) * 2.0 - 1.0;
+    float2 ndc = (vert.position / uniforms.viewportSize) * 2.0 - 1.0;
     ndc.y = -ndc.y;
     
     out.position = float4(ndc, 0.0, 1.0);
-    out.gradientPosition = vertex.gradientPosition;
+    out.gradientPosition = vert.gradientPosition;
     
     return out;
 }
