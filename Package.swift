@@ -35,6 +35,14 @@ let package = Package(
                 .process("Shaders")
             ]
         ),
+        .target(
+            name: "DesignKitExamples",
+            dependencies: ["DesignKit"],
+            path: "Examples",
+            swiftSettings: [
+                .define("EXAMPLES_TARGET")
+            ]
+        ),
         .testTarget(
             name: "DesignKitTests",
             dependencies: [
@@ -45,4 +53,3 @@ let package = Package(
         )
     ]
 )
-

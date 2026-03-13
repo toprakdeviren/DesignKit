@@ -85,13 +85,15 @@ struct ExampleTabView: View {
                     LayoutExample()     .tag("Layout")
                     TokensExample()     .tag("Tokens")
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .tabViewStyle(.automatic)
+                #if os(iOS)
 
                 DKSegmentedBar(
                     items: ["Gallery", "Components", "New", "Layout", "Tokens"],
                     selected: $selectedTab
                 )
                 .padding()
+                #endif
             }
             .backgroundStyle(.neutral)
             .designKitTheme(selectedTheme.theme)
@@ -234,6 +236,14 @@ struct PurpleColorTokens: ColorTokensProvider {
     var info700: Color { ColorTokens.info700 }
     var info800: Color { ColorTokens.info800 }
     var info900: Color { ColorTokens.info900 }
+
+    // Semantic
+    var background:    Color { ColorTokens.background }
+    var surface:       Color { ColorTokens.surface }
+    var border:        Color { ColorTokens.border }
+    var textPrimary:   Color { ColorTokens.textPrimary }
+    var textSecondary: Color { ColorTokens.textSecondary }
+    var textTertiary:  Color { ColorTokens.textTertiary }
 }
 
 // MARK: - New Components Example
@@ -482,10 +492,10 @@ struct ComponentsExample: View {
                 Text("Avatars").textStyle(.headline)
 
                 HStack(spacing: .md) {
-                    DKAvatar(image: nil, initials: "AB", size: 40)
-                    DKAvatar(image: nil, initials: "CD", size: 48, backgroundColor: .green)
-                    DKAvatar(image: nil, initials: "EF", size: 56, backgroundColor: .orange)
-                    DKAvatar(image: nil, initials: "GH", size: 64, backgroundColor: .purple)
+                    DKAvatar(image: nil, initials: "AB", size: .md)
+                    DKAvatar(image: nil, initials: "CD", size: .lg)
+                    DKAvatar(image: nil, initials: "EF", size: .lg)
+                    DKAvatar(image: nil, initials: "GH", size: .xl)
                 }
             }
         }

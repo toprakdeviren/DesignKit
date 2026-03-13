@@ -56,7 +56,9 @@ struct ComponentGallery: View {
             }
         }
         .navigationTitle(category)
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.large)
+        #endif
     }
 }
 
@@ -149,9 +151,9 @@ struct BadgesGallery: View {
 
         GallerySection(title: "Badge Sizes") {
             HStack(spacing: .sm) {
-                DKBadge("Small",  variant: .primary, size: .sm)
-                DKBadge("Medium", variant: .primary, size: .md)
-                DKBadge("Large",  variant: .primary, size: .lg)
+                DKBadge("Small",  variant: .primary)
+                DKBadge("Medium", variant: .secondary)
+                DKBadge("Large",  variant: .success)
             }
         }
 
@@ -186,9 +188,7 @@ struct FormsGallery: View {
                 DKTextField(
                     label: "Error state",
                     placeholder: "Invalid value",
-                    text: .constant("invalid"),
-                    validationState: .error,
-                    errorMessage: "This field is required"
+                    text: .constant("invalid")
                 )
             }
         }
@@ -329,15 +329,15 @@ struct OverlaysGallery: View {
 // MARK: - Content Gallery
 
 struct ContentGallery: View {
-    @State private var rating: Double = 3.5
+    @State private var rating: Int = 3
 
     var body: some View {
         GallerySection(title: "Avatar") {
             HStack(spacing: .md) {
-                DKAvatar(image: nil, initials: "AB", size: 40)
-                DKAvatar(image: nil, initials: "CD", size: 48)
-                DKAvatar(image: nil, initials: "EF", size: 56)
-                DKAvatar(image: nil, initials: "GH", size: 64)
+                DKAvatar(image: nil, initials: "AB", size: .sm)
+                DKAvatar(image: nil, initials: "CD", size: .md)
+                DKAvatar(image: nil, initials: "EF", size: .lg)
+                DKAvatar(image: nil, initials: "GH", size: .xl)
             }
         }
 
@@ -372,8 +372,8 @@ struct ContentGallery: View {
 
         GallerySection(title: "Rating") {
             VStack(spacing: .md) {
-                DKRating(label: "Rate this",   value: $rating,         max: 5)
-                DKRating(label: "Read-only",   value: .constant(4.5),  max: 5, isInteractive: false)
+                DKRating(label: "Rate this",   value: $rating,        max: 5)
+                DKRating(label: "Read-only",   value: 4,              max: 5)
             }
         }
 
