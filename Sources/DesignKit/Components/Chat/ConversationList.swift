@@ -42,45 +42,37 @@ public struct DKConversation: Identifiable, Equatable {
         self.onlineStatus   = onlineStatus
     }
 
-    /// Whether this conversation has unread messages.
     public var hasUnread: Bool { unreadCount > 0 }
 
-    /// Formatted unread count — capped at "99+" for large values.
     public var formattedUnreadCount: String {
         unreadCount > 99 ? "99+" : "\(unreadCount)"
     }
 
-    /// Relative timestamp string: "just now", "2m", "1h", "Mon", "Dec 5".
     public var relativeTimestamp: String {
-        let now = Date()
-        let diff = now.timeIntervalSince(timestamp)
-        if diff < 60 { return DKLocalizer.string(for: .a11yAvatarGroup) == "" ? "just now" : "just now" }
-        if diff < 3600  { return "\(Int(diff / 60))m" }
-        if diff < 86400 { return "\(Int(diff / 3600))h" }
+        let diff = Date().timeIntervalSince(timestamp)
+        if diff < 60     { return "just now" }
+        if diff < 3600   { return "\(Int(diff / 60))m" }
+        if diff < 86400  { return "\(Int(diff / 3600))h" }
         let cal = Calendar.current
         if cal.isDateInYesterday(timestamp) { return "Yesterday" }
         if diff < 604800 {
-            let fmt = DateFormatter(); fmt.dateFormat = "EEE"; return fmt.string(from: timestamp)
+            let f = DateFormatter(); f.dateFormat = "EEE"; return f.string(from: timestamp)
         }
-        let fmt = DateFormatter(); fmt.dateFormat = "MMM d"; return fmt.string(from: timestamp)
+        let f = DateFormatter(); f.dateFormat = "MMM d"; return f.string(from: timestamp)
     }
 }
 
 // MARK: - DKConversationList
 
-/// A scrollable list of conversation rows with swipe actions.
+/// A scrollable conversation list with pin grouping and swipe actions.
 ///
 /// ```swift
 /// DKConversationList(conversations: items) { conversation in
-///     // navigate to message thread
+///     // navigate to thread
 /// }
-/// .onDelete { conversation in
-///     // remove from data source
-/// }
+/// .onDelete { conversation in items.removeAll { $0.id == conversation.id } }
 /// ```
 public struct DKConversationList: View {
-
-    // MARK: - Properties
 
     private let conversations: [DKConversation]
     private let onTap: (DKConversation) -> Void
@@ -91,36 +83,26 @@ public struct DKConversationList: View {
 
     @Environment(\.designKitTheme) private var theme
 
-    // MARK: - Init
-
-    public init(
-        conversations: [DKConversation],
-        onTap: @escaping (DKConversation) -> Void
-    ) {
+    public init(conversations: [DKConversation], onTap: @escaping (DKConversation) -> Void) {
         self.conversations = conversations
         self.onTap         = onTap
     }
 
-    // MARK: - Modifier style API
-
     public func onDelete(_ action: @escaping (DKConversation) -> Void) -> Self {
-        var copy = self; copy.onDelete = action; return copy
+        var c = self; c.onDelete = action; return c
     }
     public func onArchive(_ action: @escaping (DKConversation) -> Void) -> Self {
-        var copy = self; copy.onArchive = action; return copy
+        var c = self; c.onArchive = action; return c
     }
     public func onPin(_ action: @escaping (DKConversation) -> Void) -> Self {
-        var copy = self; copy.onPin = action; return copy
+        var c = self; c.onPin = action; return c
     }
     public func onMarkRead(_ action: @escaping (DKConversation) -> Void) -> Self {
-        var copy = self; copy.onMarkRead = action; return copy
+        var c = self; c.onMarkRead = action; return c
     }
-
-    // MARK: - Body
 
     public var body: some View {
         List {
-            // Pinned section
             let pinned   = conversations.filter { $0.isPinned }
             let unpinned = conversations.filter { !$0.isPinned }
 
@@ -128,10 +110,7 @@ public struct DKConversationList: View {
                 Section {
                     rows(for: pinned)
                 } header: {
-                    Text("Pinned")
-                        .textStyle(.caption1)
-                        .foregroundColor(theme.colorTokens.textSecondary)
-                        .textCase(nil)
+                    sectionHeader("Pinned", systemImage: "pin.fill")
                 }
             }
 
@@ -142,7 +121,18 @@ public struct DKConversationList: View {
         .listStyle(.plain)
     }
 
-    // MARK: - Row Builder
+    private func sectionHeader(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: systemImage)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(theme.colorTokens.textSecondary)
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(theme.colorTokens.textSecondary)
+                .textCase(nil)
+        }
+        .padding(.horizontal, 4)
+    }
 
     @ViewBuilder
     private func rows(for items: [DKConversation]) -> some View {
@@ -155,25 +145,20 @@ public struct DKConversationList: View {
                     leadingActions(for: conversation)
                 }
                 .listRowInsets(EdgeInsets())
-                .listRowSeparatorTint(theme.colorTokens.border.opacity(0.5))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
         }
     }
-
-    // MARK: - Swipe Actions
 
     @ViewBuilder
     private func trailingActions(for item: DKConversation) -> some View {
         if let onDelete {
-            Button(role: .destructive) {
-                onDelete(item)
-            } label: {
+            Button(role: .destructive) { onDelete(item) } label: {
                 Label("Delete", systemImage: "trash")
             }
         }
         if let onArchive {
-            Button {
-                onArchive(item)
-            } label: {
+            Button { onArchive(item) } label: {
                 Label("Archive", systemImage: "archivebox")
             }
             .tint(theme.colorTokens.primary500)
@@ -183,18 +168,14 @@ public struct DKConversationList: View {
     @ViewBuilder
     private func leadingActions(for item: DKConversation) -> some View {
         if let onMarkRead {
-            Button {
-                onMarkRead(item)
-            } label: {
+            Button { onMarkRead(item) } label: {
                 Label(item.hasUnread ? "Mark Read" : "Mark Unread",
                       systemImage: item.hasUnread ? "envelope.open" : "envelope.badge")
             }
             .tint(theme.colorTokens.success500)
         }
         if let onPin {
-            Button {
-                onPin(item)
-            } label: {
+            Button { onPin(item) } label: {
                 Label(item.isPinned ? "Unpin" : "Pin",
                       systemImage: item.isPinned ? "pin.slash" : "pin")
             }
@@ -205,31 +186,28 @@ public struct DKConversationList: View {
 
 // MARK: - DKConversationRow
 
-/// A single conversation row: avatar + name + preview + timestamp + badge.
 public struct DKConversationRow: View {
 
     let conversation: DKConversation
     let onTap: (DKConversation) -> Void
 
     @Environment(\.designKitTheme) private var theme
+    @State private var isPressed = false
 
     public var body: some View {
         Button {
             onTap(conversation)
         } label: {
-            HStack(spacing: DesignTokens.Spacing.md.rawValue) {
+            HStack(alignment: .center, spacing: 14) {
                 avatarView
                 contentView
             }
-            .padding(.horizontal, DesignTokens.Spacing.md.rawValue)
-            .padding(.vertical, DesignTokens.Spacing.sm.rawValue)
-            .background(
-                conversation.hasUnread
-                    ? theme.colorTokens.primary500.opacity(0.04)
-                    : Color.clear
-            )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
+            .background(rowBackground)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ConversationRowButtonStyle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
     }
@@ -248,80 +226,105 @@ public struct DKConversationRow: View {
     // MARK: - Content
 
     private var contentView: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 4) {
             topRow
             bottomRow
         }
     }
 
     private var topRow: some View {
-        HStack(alignment: .firstTextBaseline) {
-            // Name + muted icon
-            HStack(spacing: 4) {
-                if conversation.isPinned {
-                    Image(systemName: "pin.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(theme.colorTokens.textSecondary)
-                }
-                Text(conversation.name)
-                    .textStyle(.headline)
-                    .foregroundColor(theme.colorTokens.textPrimary)
-                    .lineLimit(1)
-                if conversation.isMuted {
-                    Image(systemName: "bell.slash.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(theme.colorTokens.textSecondary)
-                }
+        HStack(alignment: .center, spacing: 0) {
+            // Pin icon
+            if conversation.isPinned {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(theme.colorTokens.warning400)
+                    .padding(.trailing, 4)
             }
 
-            Spacer()
+            // Name
+            Text(conversation.name)
+                .font(.system(size: 16, weight: conversation.hasUnread ? .semibold : .medium))
+                .foregroundColor(theme.colorTokens.textPrimary)
+                .lineLimit(1)
+
+            // Muted
+            if conversation.isMuted {
+                Image(systemName: "bell.slash.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(theme.colorTokens.textSecondary.opacity(0.6))
+                    .padding(.leading, 5)
+            }
+
+            Spacer(minLength: 8)
 
             // Timestamp
             Text(conversation.relativeTimestamp)
-                .textStyle(.caption1)
+                .font(.system(size: 13))
                 .foregroundColor(
-                    conversation.hasUnread
+                    conversation.hasUnread && !conversation.isMuted
                         ? theme.colorTokens.primary500
-                        : theme.colorTokens.textSecondary
+                        : theme.colorTokens.textSecondary.opacity(0.55)
                 )
+                .monospacedDigit()
         }
     }
 
     private var bottomRow: some View {
-        HStack(alignment: .center) {
-            // Preview — typing indicator or last message
-            if conversation.isTyping {
-                DKConversationTypingIndicator()
-            } else {
-                Text(conversation.lastMessage)
-                    .textStyle(.subheadline)
-                    .foregroundColor(
-                        conversation.hasUnread
-                            ? theme.colorTokens.textPrimary
-                            : theme.colorTokens.textSecondary
-                    )
-                    .lineLimit(1)
-                    .fontWeight(conversation.hasUnread ? .medium : .regular)
+        HStack(alignment: .center, spacing: 0) {
+            // Preview text or typing dots
+            Group {
+                if conversation.isTyping {
+                    DKConversationTypingIndicator()
+                } else {
+                    Text(conversation.lastMessage)
+                        .font(.system(size: 14))
+                        .foregroundColor(
+                            conversation.hasUnread
+                                ? theme.colorTokens.textPrimary.opacity(0.85)
+                                : theme.colorTokens.textSecondary.opacity(0.55)
+                        )
+                        .fontWeight(conversation.hasUnread && !conversation.isMuted ? .medium : .regular)
+                        .lineLimit(1)
+                }
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
             // Unread badge
+            unreadBadge
+        }
+    }
+
+    @ViewBuilder
+    private var unreadBadge: some View {
+        if conversation.hasUnread && !conversation.isMuted {
+            Text(conversation.formattedUnreadCount)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(
+                    Capsule()
+                        .fill(theme.colorTokens.primary500)
+                )
+                .frame(minWidth: 22)
+        } else if conversation.hasUnread && conversation.isMuted {
+            Circle()
+                .fill(theme.colorTokens.textSecondary.opacity(0.35))
+                .frame(width: 9, height: 9)
+        }
+    }
+
+    // MARK: - Background
+
+    private var rowBackground: some View {
+        Group {
             if conversation.hasUnread && !conversation.isMuted {
-                Text(conversation.formattedUnreadCount)
-                    .textStyle(.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule().fill(theme.colorTokens.primary500)
-                    )
-                    .frame(minWidth: 20)
-            } else if conversation.hasUnread && conversation.isMuted {
-                Circle()
-                    .fill(theme.colorTokens.textSecondary.opacity(0.4))
-                    .frame(width: 8, height: 8)
+                // Subtle unread tint
+                theme.colorTokens.primary500.opacity(0.045)
+            } else {
+                Color.clear
             }
         }
     }
@@ -330,28 +333,39 @@ public struct DKConversationRow: View {
 
     private var accessibilityLabel: String {
         var label = "\(conversation.name). "
-        if conversation.isTyping {
-            label += "Typing."
-        } else {
-            label += "\(conversation.lastMessage)."
-        }
-        if conversation.hasUnread {
-            label += " \(conversation.unreadCount) unread."
-        }
+        label += conversation.isTyping ? "Typing." : "\(conversation.lastMessage)."
+        if conversation.hasUnread { label += " \(conversation.unreadCount) unread." }
         label += " \(conversation.relativeTimestamp)."
         return label
     }
 }
 
+// MARK: - Press Button Style
+
+private struct ConversationRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                configuration.isPressed
+                    ? Color.primary.opacity(0.06)
+                    : Color.clear
+            )
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
 // MARK: - Typing Dots Indicator
 
-/// Animated three-dot typing indicator for use in conversation rows.
+/// Animated three-dot typing indicator — smooth sequential bounce.
 public struct DKConversationTypingIndicator: View {
-    @State private var phase: Int = 0
 
-    private let dotSize: CGFloat   = 5
-    private let dotSpacing: CGFloat = 3
-    private let duration: Double   = 0.45
+    /// Each dot's vertical offset drives the bounce
+    @State private var offsets: [CGFloat] = [0, 0, 0]
+
+    private let dotSize: CGFloat   = 5.5
+    private let dotSpacing: CGFloat = 4
+    /// Total cycle duration for one full wave
+    private let cycleDuration: Double = 1.1
 
     @Environment(\.designKitTheme) private var theme
 
@@ -359,30 +373,28 @@ public struct DKConversationTypingIndicator: View {
 
     public var body: some View {
         HStack(spacing: dotSpacing) {
-            ForEach(0..<3, id: \.self) { index in
+            ForEach(0..<3, id: \.self) { i in
                 Circle()
-                    .fill(theme.colorTokens.textSecondary)
+                    .fill(theme.colorTokens.textSecondary.opacity(0.7))
                     .frame(width: dotSize, height: dotSize)
-                    .scaleEffect(phase == index ? 1.4 : 1.0)
-                    .opacity(phase == index ? 1.0 : 0.4)
-                    .animation(
-                        .easeInOut(duration: duration / 3)
-                            .repeatForever(autoreverses: true)
-                            .delay(Double(index) * (duration / 3)),
-                        value: phase
-                    )
+                    .offset(y: offsets[i])
             }
         }
-        .onAppear {
-            withAnimation { phase = 0 }
-            startCycle()
-        }
+        .onAppear { animateDots() }
         .accessibilityLabel("Typing")
     }
 
-    private func startCycle() {
-        Timer.scheduledTimer(withTimeInterval: duration / 3, repeats: true) { timer in
-            phase = (phase + 1) % 3
+    private func animateDots() {
+        for i in 0..<3 {
+            let delay = Double(i) * (cycleDuration / 4.0)
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                withAnimation(
+                    .easeInOut(duration: cycleDuration / 3.0)
+                    .repeatForever(autoreverses: true)
+                ) {
+                    offsets[i] = -5
+                }
+            }
         }
     }
 }
@@ -391,56 +403,67 @@ public struct DKConversationTypingIndicator: View {
 
 #if DEBUG
 #Preview("Conversation List") {
-    DKConversationList(
-        conversations: [
-            DKConversation(
-                name: "Alice Johnson",
-                avatarInitials: "AJ",
-                lastMessage: "Sure, sounds good! See you tomorrow 👋",
-                timestamp: Date().addingTimeInterval(-60),
-                unreadCount: 3,
-                isPinned: true,
-                onlineStatus: .online
-            ),
-            DKConversation(
-                name: "Bob Smith",
-                avatarInitials: "BS",
-                lastMessage: "",
-                timestamp: Date().addingTimeInterval(-120),
-                unreadCount: 0,
-                isTyping: true,
-                onlineStatus: .busy
-            ),
-            DKConversation(
-                name: "Design Team",
-                avatarInitials: "DT",
-                lastMessage: "New mockups are ready for review",
-                timestamp: Date().addingTimeInterval(-3600),
-                unreadCount: 12
-            ),
-            DKConversation(
-                name: "Carlos Rivera",
-                avatarInitials: "CR",
-                lastMessage: "Thanks!",
-                timestamp: Date().addingTimeInterval(-86400),
-                unreadCount: 0,
-                isMuted: true
-            ),
-            DKConversation(
-                name: "Emma Wilson",
-                avatarInitials: "EW",
-                lastMessage: "Let me know when you're free to chat",
-                timestamp: Date().addingTimeInterval(-604800),
-                unreadCount: 1,
-                isMuted: true
-            )
-        ],
-        onTap: { _ in }
-    )
-    .onDelete { _ in }
-    .onArchive { _ in }
-    .onPin { _ in }
-    .onMarkRead { _ in }
+    NavigationStack {
+        DKConversationList(
+            conversations: [
+                DKConversation(
+                    name: "Alice Johnson",
+                    avatarInitials: "AJ",
+                    lastMessage: "Sure, sounds good! See you tomorrow 👋",
+                    timestamp: Date().addingTimeInterval(-60),
+                    unreadCount: 3,
+                    isPinned: true,
+                    onlineStatus: .online
+                ),
+                DKConversation(
+                    name: "Bob Smith",
+                    avatarInitials: "BS",
+                    lastMessage: "",
+                    timestamp: Date().addingTimeInterval(-120),
+                    isTyping: true,
+                    onlineStatus: .busy
+                ),
+                DKConversation(
+                    name: "Design Team",
+                    avatarInitials: "DT",
+                    lastMessage: "New mockups are ready for review",
+                    timestamp: Date().addingTimeInterval(-3600),
+                    unreadCount: 12
+                ),
+                DKConversation(
+                    name: "Carlos Rivera",
+                    avatarInitials: "CR",
+                    lastMessage: "Thanks!",
+                    timestamp: Date().addingTimeInterval(-86400),
+                    isMuted: true
+                ),
+                DKConversation(
+                    name: "Emma Wilson",
+                    avatarInitials: "EW",
+                    lastMessage: "Let me know when you're free to chat",
+                    timestamp: Date().addingTimeInterval(-604800),
+                    unreadCount: 1,
+                    isMuted: true
+                ),
+                DKConversation(
+                    name: "Sarah Chen",
+                    avatarInitials: "SC",
+                    lastMessage: "The presentation went really well!",
+                    timestamp: Date().addingTimeInterval(-172800),
+                    onlineStatus: .online
+                ),
+            ],
+            onTap: { _ in }
+        )
+        .onDelete { _ in }
+        .onArchive { _ in }
+        .onPin { _ in }
+        .onMarkRead { _ in }
+        .navigationTitle("Messages")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.large)
+        #endif
+    }
     .designKitTheme(.default)
 }
 #endif
