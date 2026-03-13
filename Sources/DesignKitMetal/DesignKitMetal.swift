@@ -53,13 +53,14 @@ public struct DesignKitMetal {
         guard let device = MTLCreateSystemDefaultDevice() else {
             return nil
         }
-        return """
-        Device: \(device.name)
-        Low Power: \(device.isLowPower)
-        Headless: \(device.isHeadless)
-        Registry ID: \(device.registryID)
-        Recommended Max Working Set Size: \(device.recommendedMaxWorkingSetSize / 1024 / 1024) MB
-        """
+        var info = "Device: \(device.name)"
+        #if os(macOS)
+        info += "\nLow Power: \(device.isLowPower)"
+        info += "\nHeadless: \(device.isHeadless)"
+        #endif
+        info += "\nRegistry ID: \(device.registryID)"
+        info += "\nRecommended Max Working Set Size: \(device.recommendedMaxWorkingSetSize / 1024 / 1024) MB"
+        return info
         #else
         return nil
         #endif
