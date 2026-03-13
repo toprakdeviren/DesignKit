@@ -60,8 +60,8 @@ public enum DKMessageContent: Equatable {
 
     var accessibilityDescription: String {
         switch self {
-        case .text(let t):      return t
-        case .image:            return DKLocalizer.string(for: .a11yFileUpload)
+        case .text(let t):       return t
+        case .image:             return DKLocalizer.string(for: .a11yFileUpload)
         case .file(let name, _): return "File: \(name)"
         }
     }
@@ -95,15 +95,17 @@ public struct DKMessage: Identifiable, Equatable {
 
 // MARK: - DKMessageBubble
 
-/// A chat message bubble component that adapts to sent and received states.
+/// A premium chat message bubble with reply preview, file, and status support.
 ///
-/// Fully themed via `DKTheme`. Supports text, image, and file content,
-/// optional reply previews, read receipts, and timestamps.
+/// - Outgoing: gradient bubble aligned to trailing edge.
+/// - Incoming: translucent surface bubble aligned to leading edge with optional avatar.
+/// - Reply preview is visually contained inside the bubble.
+/// - Status indicator and timestamp shown below the bubble.
 ///
 /// ```swift
 /// DKMessageBubble(
 ///     message: DKMessage(
-///         content: .text("Hey, how's it going?"),
+///         content: .text("Hey!"),
 ///         sender: .them
 ///     ),
 ///     showAvatar: true,
@@ -120,6 +122,7 @@ public struct DKMessageBubble: View {
     private let avatarInitials: String?
 
     @Environment(\.designKitTheme) private var theme
+    @State private var isPressed = false
 
     // MARK: - Init
 
@@ -142,49 +145,100 @@ public struct DKMessageBubble: View {
     // MARK: - Body
 
     public var body: some View {
-        HStack(alignment: .bottom, spacing: DesignTokens.Spacing.xs.rawValue) {
-            if isFromMe { Spacer(minLength: 56) }
+        HStack(alignment: .bottom, spacing: 8) {
 
-            if !isFromMe && showAvatar { avatarView }
+            // Leading padding / avatar slot
+            if isFromMe {
+                Spacer(minLength: 60)
+            } else {
+                avatarSlot
+            }
 
-            VStack(alignment: isFromMe ? .trailing : .leading, spacing: 3) {
-                if let reply = message.replyTo {
-                    replyPreviewView(reply)
-                }
+            // Message column
+            VStack(alignment: isFromMe ? .trailing : .leading, spacing: 4) {
                 bubbleView
                 if showTimestamp { footerView }
             }
 
-            if !isFromMe { Spacer(minLength: 56) }
+            // Trailing spacer for incoming messages
+            if !isFromMe {
+                Spacer(minLength: 60)
+            }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(isFromMe ? message.status.description : "")
     }
 
+    // MARK: - Avatar Slot
+
+    @ViewBuilder
+    private var avatarSlot: some View {
+        if showAvatar {
+            DKAvatar(image: nil, initials: avatarInitials ?? "?", size: .sm)
+        } else {
+            // Reserve same width so bubbles stay aligned in a list
+            Color.clear.frame(width: 32, height: 1)
+        }
+    }
+
     // MARK: - Bubble
 
     private var bubbleView: some View {
-        messageContent
-            .padding(.horizontal, DesignTokens.Spacing.md.rawValue)
-            .padding(.vertical, DesignTokens.Spacing.sm.rawValue)
-            .background(bubbleBackground)
-            .clipShape(BubbleShape(fromMe: isFromMe, radius: CGFloat(DesignTokens.Radius.xl.rawValue)))
+        VStack(alignment: .leading, spacing: 0) {
+            // Reply preview — flush top, inside bubble
+            if let reply = message.replyTo {
+                replyPreviewView(reply)
+            }
+
+            // Main content
+            messageContent
+                .padding(.horizontal, 14)
+                .padding(.top, message.replyTo != nil ? 8 : 12)
+                .padding(.bottom, 12)
+        }
+        .background(bubbleBackground)
+        .clipShape(
+            BubbleShape(
+                fromMe: isFromMe,
+                radius: 20,
+                hasReply: message.replyTo != nil
+            )
+        )
+        // Subtle shadow for depth
+        .shadow(
+            color: isFromMe
+                ? theme.colorTokens.primary600.opacity(0.25)
+                : Color.black.opacity(0.08),
+            radius: 6, x: 0, y: 2
+        )
+        .scaleEffect(isPressed ? 0.97 : 1.0)
+        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isPressed)
+        .onLongPressGesture(minimumDuration: 0.15, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
     }
+
+    // MARK: - Message Content
 
     @ViewBuilder
     private var messageContent: some View {
         switch message.content {
         case .text(let text):
             Text(text)
-                .textStyle(.body)
-                .foregroundColor(isFromMe ? .white : theme.colorTokens.textPrimary)
+                .font(.system(size: 16))
+                .foregroundColor(textColor)
                 .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(2)
 
         case .image(let url):
             DKLazyImage(url: url, transition: .fade())
                 .frame(maxWidth: 220, maxHeight: 220)
-                .clipShape(BubbleShape(fromMe: isFromMe, radius: CGFloat(DesignTokens.Radius.lg.rawValue)))
+                .clipShape(
+                    BubbleShape(fromMe: isFromMe, radius: 16, hasReply: message.replyTo != nil)
+                )
+                .padding(.horizontal, -14) // bleed to bubble edges
+                .padding(.bottom, -12)
 
         case .file(let name, let size):
             fileView(name: name, size: size)
@@ -192,109 +246,135 @@ public struct DKMessageBubble: View {
     }
 
     private func fileView(name: String, size: Int64) -> some View {
-        HStack(spacing: DesignTokens.Spacing.sm.rawValue) {
-            Image(systemName: "doc.fill")
-                .font(.system(size: 26))
-                .foregroundColor(isFromMe ? .white.opacity(0.85) : theme.colorTokens.primary500)
+        HStack(spacing: 12) {
+            // File icon background pill
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isFromMe ? Color.white.opacity(0.2) : theme.colorTokens.primary500.opacity(0.12))
+                    .frame(width: 44, height: 44)
+
+                Image(systemName: "doc.fill")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(isFromMe ? .white.opacity(0.9) : theme.colorTokens.primary500)
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
-                    .textStyle(.subheadline)
-                    .foregroundColor(isFromMe ? .white : theme.colorTokens.textPrimary)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(textColor)
                     .lineLimit(1)
                 Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
-                    .textStyle(.caption1)
-                    .foregroundColor(isFromMe ? .white.opacity(0.65) : theme.colorTokens.textSecondary)
+                    .font(.system(size: 12))
+                    .foregroundColor(subtextColor)
             }
         }
-        .frame(minWidth: 150, alignment: .leading)
+        .frame(minWidth: 160, alignment: .leading)
     }
 
     // MARK: - Reply Preview
 
     private func replyPreviewView(_ reply: DKMessageReply) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(reply.senderName)
-                .textStyle(.caption1)
-                .fontWeight(.semibold)
-                .foregroundColor(
-                    isFromMe ? .white.opacity(0.9) : theme.colorTokens.primary500
-                )
-            Text(reply.text)
-                .textStyle(.caption1)
-                .foregroundColor(
-                    isFromMe ? .white.opacity(0.7) : theme.colorTokens.textSecondary
-                )
-                .lineLimit(2)
-        }
-        .padding(.horizontal, DesignTokens.Spacing.sm.rawValue)
-        .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: CGFloat(DesignTokens.Radius.md.rawValue))
-                .fill(
-                    isFromMe
-                        ? Color.white.opacity(0.15)
-                        : theme.colorTokens.textSecondary.opacity(0.08)
-                )
-        )
-        .overlay(
+        HStack(spacing: 0) {
+            // Left accent bar
             Rectangle()
-                .fill(isFromMe ? Color.white.opacity(0.6) : theme.colorTokens.primary500)
+                .fill(accentBarColor)
                 .frame(width: 3)
-                .cornerRadius(1.5),
-            alignment: .leading
-        )
-        .clipShape(RoundedRectangle(cornerRadius: CGFloat(DesignTokens.Radius.md.rawValue)))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(reply.senderName)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(accentBarColor)
+
+                Text(reply.text)
+                    .font(.system(size: 12))
+                    .foregroundColor(subtextColor)
+                    .lineLimit(2)
+            }
+            .padding(.leading, 10)
+            .padding(.trailing, 14)
+            .padding(.vertical, 8)
+
+            Spacer(minLength: 0)
+        }
+        .background(replyBackgroundColor)
     }
 
     // MARK: - Footer
 
     private var footerView: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 4) {
             Text(formattedTime)
-                .textStyle(.caption2)
-                .foregroundColor(theme.colorTokens.textSecondary.opacity(0.7))
+                .font(.system(size: 11))
+                .foregroundColor(theme.colorTokens.textSecondary.opacity(0.65))
 
             if isFromMe {
-                Image(systemName: message.status.systemImage)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(
-                        message.status.isError ? theme.colorTokens.danger500 :
-                        message.status.isRead  ? theme.colorTokens.primary500 :
-                                                 theme.colorTokens.textSecondary.opacity(0.7)
-                    )
+                statusIcon
             }
         }
         .padding(.horizontal, 4)
     }
 
-    // MARK: - Avatar
+    private var statusIcon: some View {
+        let icon = Image(systemName: message.status.systemImage)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(statusColor)
 
-    private var avatarView: some View {
-        DKAvatar(
-            image: nil,
-            initials: avatarInitials ?? "?",
-            size: .sm
-        )
+        if message.status == .sending {
+            if #available(iOS 17.0, macOS 14.0, *) {
+                return AnyView(icon.symbolEffect(.pulse, isActive: true))
+            }
+        }
+        return AnyView(icon)
     }
 
-    // MARK: - Helpers
+    // MARK: - Color Helpers
+
+    private var textColor: Color {
+        isFromMe ? .white : theme.colorTokens.textPrimary
+    }
+
+    private var subtextColor: Color {
+        isFromMe ? .white.opacity(0.65) : theme.colorTokens.textSecondary
+    }
+
+    private var accentBarColor: Color {
+        isFromMe ? Color.white.opacity(0.7) : theme.colorTokens.primary500
+    }
+
+    private var replyBackgroundColor: Color {
+        isFromMe
+            ? Color.black.opacity(0.12)
+            : theme.colorTokens.border.opacity(0.15)
+    }
+
+    private var statusColor: Color {
+        switch message.status {
+        case .failed:    return theme.colorTokens.danger500
+        case .read:      return theme.colorTokens.primary400
+        default:         return theme.colorTokens.textSecondary.opacity(0.55)
+        }
+    }
+
+    // MARK: - Bubble Background
 
     private var bubbleBackground: some ShapeStyle {
         if isFromMe {
             return AnyShapeStyle(
                 LinearGradient(
-                    colors: [
-                        theme.colorTokens.primary500,
-                        theme.colorTokens.primary600
+                    stops: [
+                        .init(color: theme.colorTokens.primary400, location: 0),
+                        .init(color: theme.colorTokens.primary600, location: 1),
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             )
         }
+        // Incoming: slightly translucent surface feel
         return AnyShapeStyle(theme.colorTokens.surface)
     }
+
+    // MARK: - Helpers
 
     private var formattedTime: String {
         let formatter = DateFormatter()
@@ -311,40 +391,51 @@ public struct DKMessageBubble: View {
 
 // MARK: - BubbleShape
 
-/// A rounded rectangle with a smaller radius on the sender-side bottom corner,
-/// creating the classic messaging bubble silhouette.
+/// Rounded rectangle with one chamfered (smaller radius) corner at the
+/// sender-side bottom, giving the classic chat bubble silhouette.
+/// The top corners are always fully rounded. When there's a reply preview
+/// the top corners are square so the header bleeds flush to the bubble edge.
 private struct BubbleShape: Shape {
     let fromMe: Bool
     let radius: CGFloat
+    var hasReply: Bool = false
 
-    private var tailRadius: CGFloat { max(radius * 0.2, 4) }
+    private var tailRadius: CGFloat { max(radius * 0.18, 3) }
 
     func path(in rect: CGRect) -> Path {
         let r  = min(radius, min(rect.width, rect.height) / 2)
         let tr = min(tailRadius, r)
 
-        // Corner radii: [topLeft, topRight, bottomRight, bottomLeft]
-        let tl = r
-        let top = r
-        let br  = fromMe ? tr : r
-        let bl  = fromMe ? r  : tr
+        // corners: topLeft, topRight, bottomRight, bottomLeft
+        let tl: CGFloat = hasReply ? 2 : r
+        let top: CGFloat = hasReply ? 2 : r
+        let br: CGFloat = fromMe ? tr : r
+        let bl: CGFloat = fromMe ? r  : tr
 
-        var path = Path()
-        path.move(to: CGPoint(x: tl, y: 0))
-        path.addLine(to: CGPoint(x: rect.width - top, y: 0))
-        path.addArc(center: CGPoint(x: rect.width - top, y: top),
-                    radius: top, startAngle: .degrees(-90), endAngle: .degrees(0), clockwise: false)
-        path.addLine(to: CGPoint(x: rect.width, y: rect.height - br))
-        path.addArc(center: CGPoint(x: rect.width - br, y: rect.height - br),
-                    radius: br, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false)
-        path.addLine(to: CGPoint(x: bl, y: rect.height))
-        path.addArc(center: CGPoint(x: bl, y: rect.height - bl),
-                    radius: bl, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
-        path.addLine(to: CGPoint(x: 0, y: tl))
-        path.addArc(center: CGPoint(x: tl, y: tl),
-                    radius: tl, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
-        path.closeSubpath()
-        return path
+        var p = Path()
+        p.move(to: CGPoint(x: tl, y: 0))
+        p.addLine(to: CGPoint(x: rect.width - top, y: 0))
+        p.addArc(
+            center: CGPoint(x: rect.width - top, y: top),
+            radius: top, startAngle: .degrees(-90), endAngle: .degrees(0), clockwise: false
+        )
+        p.addLine(to: CGPoint(x: rect.width, y: rect.height - br))
+        p.addArc(
+            center: CGPoint(x: rect.width - br, y: rect.height - br),
+            radius: br, startAngle: .degrees(0), endAngle: .degrees(90), clockwise: false
+        )
+        p.addLine(to: CGPoint(x: bl, y: rect.height))
+        p.addArc(
+            center: CGPoint(x: bl, y: rect.height - bl),
+            radius: bl, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false
+        )
+        p.addLine(to: CGPoint(x: 0, y: tl))
+        p.addArc(
+            center: CGPoint(x: tl, y: tl),
+            radius: tl, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false
+        )
+        p.closeSubpath()
+        return p
     }
 }
 
@@ -353,8 +444,9 @@ private struct BubbleShape: Shape {
 #if DEBUG
 #Preview("Message Bubble") {
     ScrollView {
-        VStack(spacing: DesignTokens.Spacing.sm.rawValue) {
+        VStack(spacing: 6) {
 
+            // Incoming — plain text
             DKMessageBubble(
                 message: DKMessage(
                     content: .text("Hey! How's the DesignKit coming along? 😄"),
@@ -365,6 +457,7 @@ private struct BubbleShape: Shape {
                 avatarInitials: "JD"
             )
 
+            // Outgoing — read receipt
             DKMessageBubble(
                 message: DKMessage(
                     content: .text("Really well! Just finished the message bubble component."),
@@ -374,6 +467,7 @@ private struct BubbleShape: Shape {
                 )
             )
 
+            // Incoming with reply
             DKMessageBubble(
                 message: DKMessage(
                     content: .text("That's great news, looking forward to trying it out."),
@@ -388,6 +482,7 @@ private struct BubbleShape: Shape {
                 avatarInitials: "JD"
             )
 
+            // Outgoing — file attachment
             DKMessageBubble(
                 message: DKMessage(
                     content: .file(name: "DesignKit-v2.zip", size: 4_320_000),
@@ -397,6 +492,7 @@ private struct BubbleShape: Shape {
                 )
             )
 
+            // Outgoing — failed
             DKMessageBubble(
                 message: DKMessage(
                     content: .text("Failed to send this one."),
@@ -405,10 +501,22 @@ private struct BubbleShape: Shape {
                     status: .failed
                 )
             )
+
+            // Incoming — longer text
+            DKMessageBubble(
+                message: DKMessage(
+                    content: .text("SwiftUI previews are the best way to iterate quickly on components like this. Really speeds up the design-to-code workflow!"),
+                    sender: .them,
+                    timestamp: Date()
+                ),
+                showAvatar: true,
+                avatarInitials: "JD"
+            )
         }
-        .padding()
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
-    .designKitTheme(.default)
-    .background(Color.gray.opacity(0.08))
+    .background(Color(white: 0.10))
+    .designKitTheme(.dark)
 }
 #endif
