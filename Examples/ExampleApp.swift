@@ -1,8 +1,8 @@
 import SwiftUI
 import DesignKit
 
-/// Root entry point for the DesignKit example app.
-@main
+/// DesignKit example app root — entry point for standalone use.
+/// Note: @main is intentionally omitted; this target is a library for Previews.
 struct DesignKitExampleApp: App {
     var body: some Scene {
         WindowGroup {

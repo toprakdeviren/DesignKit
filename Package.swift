@@ -17,6 +17,10 @@ let package = Package(
         .library(
             name: "DesignKitMetal",
             targets: ["DesignKitMetal"]
+        ),
+        .library(
+            name: "DesignKitExamples",
+            targets: ["DesignKitExamples"]
         )
     ],
     dependencies: [
