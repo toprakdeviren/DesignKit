@@ -53,7 +53,7 @@ public struct DKMarkdownRenderer: View {
             // Parse the markdown string.
             // Using inlineOnlyPreservingWhitespace to prevent SwiftUI from stripping newlines
             // or misinterpreting standalone paragraphs in chat bubbles.
-            var attrString = try AttributedString(
+            let attrString = try AttributedString(
                 markdown: markdownText,
                 options: AttributedString.MarkdownParsingOptions(
                     interpretedSyntax: .inlineOnlyPreservingWhitespace

@@ -78,7 +78,7 @@ public extension View {
 
 // MARK: - ContentSizeCategory + Comparable
 
-extension ContentSizeCategory: Comparable {
+extension ContentSizeCategory: @retroactive Comparable {
     public static func < (lhs: ContentSizeCategory, rhs: ContentSizeCategory) -> Bool {
         lhs.index < rhs.index
     }

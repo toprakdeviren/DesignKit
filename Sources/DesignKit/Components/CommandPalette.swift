@@ -299,13 +299,13 @@ public struct DKCommandPalette: View {
 
 private struct CommandPaletteActions {
     #if canImport(ObjectiveC)
-    static let moveUp = Selector(("moveUp:"))
-    static let moveDown = Selector(("moveDown:"))
-    static let escape = Selector(("cancelOperation:"))
+    static let moveUp   = #selector(NSResponder.moveUp(_:))
+    static let moveDown = #selector(NSResponder.moveDown(_:))
+    static let escape   = #selector(NSResponder.cancelOperation(_:))
     #else
-    static let moveUp = Selector("moveUp:")
+    static let moveUp   = Selector("moveUp:")
     static let moveDown = Selector("moveDown:")
-    static let escape = Selector("cancelOperation:")
+    static let escape   = Selector("cancelOperation:")
     #endif
 }
 

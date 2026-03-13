@@ -194,7 +194,7 @@ public struct DKLazyImage<Failure: View>: View {
         guard let url else { loadState = .failed(URLError(.badURL)); return }
 
         // Cache hit — instant
-        if let cached = await DKImageCache.shared.image(for: url) {
+        if let cached = DKImageCache.shared.image(for: url) {
             withAnimation(transitionAnimation) { loadState = .loaded(cached) }
             isVisible = true
             return
@@ -227,7 +227,7 @@ public struct DKLazyImage<Failure: View>: View {
                 guard let img = NSImage(data: data) else { throw URLError(.cannotDecodeContentData) }
                 #endif
 
-                await DKImageCache.shared.store(img, for: url)
+                DKImageCache.shared.store(img, for: url)
 
                 await MainActor.run {
                     withAnimation(transitionAnimation) {
