@@ -298,7 +298,7 @@ public struct DKCommandPalette: View {
 // MARK: - Hardware Keyboard Selectors
 
 private struct CommandPaletteActions {
-    #if canImport(ObjectiveC)
+    #if os(macOS)
     static let moveUp   = #selector(NSResponder.moveUp(_:))
     static let moveDown = #selector(NSResponder.moveDown(_:))
     static let escape   = #selector(NSResponder.cancelOperation(_:))
