@@ -44,6 +44,7 @@
 /// - ``DKTabBar``
 /// - ``DKSidebar``
 /// - ``DKLink``
+/// - ``DKMarkdownViewer``
 /// - ``DKInlineCode``
 /// - ``DKListItem``
 /// - ``DKOrderedListItem``
